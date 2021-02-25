@@ -1,6 +1,3 @@
-# CS-230-final-project
-
-
 Write the UI
 Implement the Client 
 Log in. User inserts username and password, and client sends the information to server. The server makes data lookup in Hadoop and sends confirmation to the client. If the server sends OK, the client logs in. 
@@ -42,3 +39,17 @@ Nishitha:
 Set up HDFS file system. Table -- <USER> (UserID, UserName, User Picture), <Message> (senderID, ReceiverID, time stamp, content), 
 Implement python function to look-up data in the file system.
 Implement python function to store data in the file system.
+
+Amisha:
+Implement a python function that intercepts client GET and POST request that was made through SocketIO.
+Implement a python function that can send data back to the client through SocketIO (or any other protocol). 
+
+
+Materials:
+https://medium.com/swlh/how-to-make-simple-web-chat-8e9778f992c9
+https://codeburst.io/building-your-first-chat-application-using-flask-in-7-minutes-f98de4adfa5d
+https://www.twilio.com/blog/multi-room-web-chat-flask-react-twilio-conversations
+https://pusher.com/tutorials/chat-flask-vue-part-3
+https://www.rabbitmq.com/tutorials/tutorial-one-python.html
+https://www.rabbitmq.com/tutorials/tutorial-two-python.html
+
