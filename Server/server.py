@@ -19,6 +19,7 @@ server = socket(AF_INET, SOCK_STREAM)
 server.bind(address)
 
 
+# This function intercepts the incoming connections from the clients
 def accept_incoming_connections():
     """Sets up handling for incoming clients."""
     while True:
@@ -38,7 +39,6 @@ def handle_client(client):  # Takes client socket as argument.
     if len(split) > 1:
         dest =  split[1]
 
-    print(name)
     welcome = '%s Connected!! Type #QQ# to exit.' % name
     client.send(bytes(welcome, "utf8"))
     msg = "%s has joined" % name
@@ -65,13 +65,21 @@ def handle_client(client):  # Takes client socket as argument.
             broadcast(bytes("%s has left" % name, "utf8"))
             break
 
-# Retrieves all the messages that were sent to the user before
+# Retrieves all the messages that were sent to the user before.
+# It reads all the destinationa/*/message.txt files and retrieves the messages.
 def get_all_message_for_dest(destination):
-    ''' returns a list of strings '''
-    return []
+    ''' returns a dictionary of strings
+    The format is like this {'source' : 'message'}
+    for example if UserA (destination) had received messages
+    from UserB, and UserC a sample dictionary will look like -
+    {UserA : msg1, UserA : msg2, UserC : msg3}'''
+    return {}
 
 
-# Store message in the mongodb. 
+# Store message in the file system. It stores the file in following manner -
+# inside destination/source folder it creates a text or ureuses existing text file.
+# And stores the message in the txt file. For example,
+# UserA/UserB/message.txt
 def store_message_in_db(source, destination, message):
     ''' store the message in the database '''
     return
