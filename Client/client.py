@@ -77,7 +77,7 @@ send_button.pack()
 top.protocol("WM_DELETE_WINDOW", on_closing)
 
 buffer_size = 1024
-server_address = ('localhost', 8009)
+server_address = ('localhost', 8018)
 
 client_socket = socket(AF_INET, SOCK_STREAM)
 client_socket.connect(server_address)

@@ -12,7 +12,7 @@ from threading import Thread
 clients = {}
 addresses = {}
 host = 'localhost'
-port = 8009
+port = 8018
 buffer_size = 1024
 address = (host, port)
 server = socket(AF_INET, SOCK_STREAM)
@@ -31,19 +31,21 @@ def accept_incoming_connections():
 
 def handle_client(client):  # Takes client socket as argument.
     """Handles a single client connection."""
-    message = client.recv(buffer_size).decode("ascii")
+    message = client.recv(buffer_size).decode("utf8")
     split = message.split('#')
     name = split[0]
-    dest = split[1]
+    dest = ""
+    if len(split) > 1:
+        dest =  split[1]
 
     print(name)
     welcome = '%s Connected!! Type #QQ# to exit.' % name
     client.send(bytes(welcome, "utf8"))
     msg = "%s has joined" % name
-    broadcast(bytes(msg, "utf8"))
+    broadcast(msg)
     clients[client] = name
     while True:
-        message = client.recv(buffer_size)
+        message = client.recv(buffer_size).decode("utf8")
         split = message.split('#')
         msg = split[0]
         dest = split[1]
@@ -75,9 +77,9 @@ def store_message_in_db(source, destination, message):
     return
 
 # Function to broadcast a message to everyone
-def broadcast(msg, source=""):  
+def broadcast(msg, source=""):
     for sock in clients:
-        sock.send(bytes(source + " : ", "utf8")+msg)
+        sock.send(bytes(source + " : " + msg, "utf8"))
         if len(source) > 0:
             store_message_in_db(source, clients[sock], msg)
 
@@ -85,16 +87,17 @@ def broadcast(msg, source=""):
 def unicast(msg, dest, source=""):  
     for sock in clients:
         if clients[sock] == dest:
-            sock.send(bytes(source + " : ", "utf8")+msg)
+            sock.send(bytes(source + " : " + msg, "utf8"))
         if len(source) > 0:
             store_message_in_db(source, clients[sock], msg)
 
 # Function to send a message to a set of users
 def multicast(msg, dest, source=""):  
-    dests = dest.split('#')
+    dests = dest.split(',')
     for sock in clients:
+        print(clients[sock])
         if clients[sock] in dests:
-            sock.send(bytes(source + " : ", "utf8")+msg)
+            sock.send(bytes(source + " : " + msg, "utf8"))
             if len(source) > 0:
                 store_message_in_db(source, clients[sock], msg)
 
