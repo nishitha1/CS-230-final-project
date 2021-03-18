@@ -50,11 +50,11 @@ def handle_client(client):  # Takes client socket as argument.
 
         if msg != bytes("#QQ#", "utf8"):
         	if dest == "broadcast" :
- 	           broadcast(msg, name+": ")
+ 	           broadcast(msg, name)
  	        elif "," not in dest: 
- 	        	unicast(msg, dest, name+": ")
+ 	        	unicast(msg, dest, name)
  	        else :
- 	        	multicast(msg, dest, name+": ")
+ 	        	multicast(msg, dest, name+)
 
         else:
             client.send(bytes("#QQ#", "utf8"))
@@ -63,23 +63,41 @@ def handle_client(client):  # Takes client socket as argument.
             broadcast(bytes("%s has left" % name, "utf8"))
             break
 
+# Retrieves all the messages that were sent to the user before
+def get_all_message_for_dest(destination):
+	''' returns a list of strings '''
+	return []
+
+
+# Store message in the mongodb. 
+def store_message_in_db(source, destination, message):
+	''' store the message in the database '''
+	return
+
 # Function to broadcast a message to everyone
 def broadcast(msg, prefix=""):  
 	for sock in clients:
-	    sock.send(bytes(prefix, "utf8")+msg)
+	    sock.send(bytes(prefix + " : ", "utf8")+msg)
+	    if len(prefix) > 0:
+	    	store_message_in_db(prefix, clients[sock], msg)
 
 # Function to send a message to a particular user
 def unicast(msg, dest, prefix=""):  
 	for sock in clients:
-		if sock == dest:
-		    sock.send(bytes(prefix, "utf8")+msg)
+		if clients[sock] == dest:
+		    sock.send(bytes(prefix + " : ", "utf8")+msg)
+		    if len(prefix) > 0:
+		    	store_message_in_db(prefix, clients[sock], msg)
 
 # Function to send a message to a set of users
 def multicast(msg, dest, prefix=""):  
 	dests = dest.split('#')
 	for sock in clients:
-		if sock in dests:
-		    sock.send(bytes(prefix, "utf8")+msg)
+		if clients[sock] in dests:
+		    sock.send(bytes(prefix + " : ", "utf8")+msg)
+		    if len(prefix) > 0:
+		    	store_message_in_db(prefix, clients[sock], msg)
+
 
 if __name__ == "__main__":
     server.listen(10)  
