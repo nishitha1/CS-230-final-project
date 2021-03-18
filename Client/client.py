@@ -4,13 +4,13 @@ from threading import Thread
 import tkinter
 
 
+# This method receives message from the server
 def receive():
-    """Handles receiving of messages."""
     while True:
         try:
-            msg = client_socket.recv(BUFSIZ).decode("utf8")
+            msg = client_socket.recv(buffer_size).decode("utf8")
             msg_list.insert(tkinter.END, msg)
-        except OSError:  # Possibly client has left the chat.
+        except OSError:
             break
 
 
@@ -21,15 +21,17 @@ def send(event=None):  # event is passed by binders.
     deliverable = ""
 
     if msg == "Type your username" :
-    	return
+        return
     if dest == "Type your destination" :
-    	dest = ""
+        dest = ""
 
     destination.set("Type your destination")
-    my_msg.set("")  # Clears input field.
+    my_msg.set("")
     deliverable = msg + "#" + dest
     print(deliverable)
+
     client_socket.send(bytes(deliverable, "utf8"))
+
     if msg == "#QQ#":
         client_socket.close()
         top.quit()
@@ -45,15 +47,17 @@ top.title("ZotChat")
 
 messages_frame = tkinter.Frame(top)
 
+# Set up message text field
 my_msg = tkinter.StringVar()  # For the messages to be sent.
 my_msg.set("Type your username")
 
+# Set up destination text field
 destination = tkinter.StringVar()
 destination.set("Type your destination")
 
 scrollbar = tkinter.Scrollbar(messages_frame)  # To navigate through past messages.
 # Following will contain the messages.
-msg_list = tkinter.Listbox(messages_frame, height=15, width=50, yscrollcommand=scrollbar.set)
+msg_list = tkinter.Listbox(messages_frame, height=20, width=55, yscrollcommand=scrollbar.set)
 scrollbar.pack(side=tkinter.RIGHT, fill=tkinter.Y)
 msg_list.pack(side=tkinter.LEFT, fill=tkinter.BOTH)
 msg_list.pack()
@@ -72,8 +76,8 @@ send_button.pack()
 
 top.protocol("WM_DELETE_WINDOW", on_closing)
 
-BUFSIZ = 1024
-server_address = ('localhost', 8007)
+buffer_size = 1024
+server_address = ('localhost', 8009)
 
 client_socket = socket(AF_INET, SOCK_STREAM)
 client_socket.connect(server_address)
