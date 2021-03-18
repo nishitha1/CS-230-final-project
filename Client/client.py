@@ -17,24 +17,40 @@ def receive():
 def send(event=None):  # event is passed by binders.
     """Handles sending of messages."""
     msg = my_msg.get()
+    dest = destination.get()
+    deliverable = ""
+
+    if msg == "Type your username" :
+    	return
+    if dest == "Type your destination" :
+    	dest = ""
+
+    destination.set("Type your destination")
     my_msg.set("")  # Clears input field.
-    client_socket.send(bytes(msg, "utf8"))
-    if msg == "{quit}":
+    deliverable = msg + "#" + dest
+    print(deliverable)
+    client_socket.send(bytes(deliverable, "utf8"))
+    if msg == "#QQ#":
         client_socket.close()
         top.quit()
 
 
 def on_closing(event=None):
-    """This function is to be called when the window is closed."""
-    my_msg.set("{quit}")
+    """This function is called when the window is closed."""
+    my_msg.set("#QQ#")
     send()
 
 top = tkinter.Tk()
-top.title("Chatter")
+top.title("ZotChat")
 
 messages_frame = tkinter.Frame(top)
+
 my_msg = tkinter.StringVar()  # For the messages to be sent.
-my_msg.set("Type your messages here.")
+my_msg.set("Type your username")
+
+destination = tkinter.StringVar()
+destination.set("Type your destination")
+
 scrollbar = tkinter.Scrollbar(messages_frame)  # To navigate through past messages.
 # Following will contain the messages.
 msg_list = tkinter.Listbox(messages_frame, height=15, width=50, yscrollcommand=scrollbar.set)
@@ -46,24 +62,21 @@ messages_frame.pack()
 entry_field = tkinter.Entry(top, textvariable=my_msg)
 entry_field.bind("<Return>", send)
 entry_field.pack()
+
+entry_field2 = tkinter.Entry(top, textvariable=destination)
+entry_field2.bind("<Return>", send)
+entry_field2.pack()
+
 send_button = tkinter.Button(top, text="Send", command=send)
 send_button.pack()
 
 top.protocol("WM_DELETE_WINDOW", on_closing)
 
-#----Now comes the sockets part----
-HOST = input('Enter host: ')
-PORT = input('Enter port: ')
-if not PORT:
-    PORT = 8001
-else:
-    PORT = int(PORT)
-
 BUFSIZ = 1024
-ADDR = (HOST, PORT)
+server_address = ('localhost', 8007)
 
 client_socket = socket(AF_INET, SOCK_STREAM)
-client_socket.connect(ADDR)
+client_socket.connect(server_address)
 
 receive_thread = Thread(target=receive)
 receive_thread.start()
