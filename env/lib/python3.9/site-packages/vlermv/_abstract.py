@@ -1,0 +1,265 @@
+import os, re
+from inspect import getmembers
+
+from ._exceptions import PermissionError
+from .serializers import pickle
+from .transformers import magic
+from ._util import safe_path
+
+import logging
+
+logger = logging.getLogger(__name__)
+
+class AbstractVlermv:
+    '''
+    A :py:class:`dict` API to various things
+    '''
+
+    @classmethod
+    def from_attributes(Class, obj):
+        '''
+        Use the attributes of an object as kwargs to the __init__ method,
+        for example::
+        
+        @Vlermv.from_attributes
+        class MyVlermv(Vlermv):
+            serializer = json
+        '''
+        return Class(**{k:v for (k,v) in getmembers(obj)})
+
+    @classmethod
+    def memoize(Class, *args, **kwargs):
+        '''
+        Memoize/record a function inside this vlermv. ::
+
+            @Vlermv.cache('~/.http')
+            def get(url):
+                return requests.get(url, auth = ('username', 'password'))
+
+        The args and kwargs get passed to the Vlermv with some slight changes.
+        Here are the changes.
+
+        First, the default ``transformer`` is the tuple transformer
+        rather than the simple transformer.
+
+        Second, it is valid for cache to be called without arguments.
+        Vlermv would ordinarily fail if no arguments were passed to it.
+        If you pass no arguments to cache, the Vlermv directory argument
+        (the one required argument) will be set to the name of the function.
+
+        Third, you are more likely to use the ``cache_exceptions`` keyword
+        argument; see :py:class:`~vlermv.Vlermv` for documentation on that.
+        '''
+        def decorator(func):
+            if len(args) == 0:
+                if hasattr(func, '__name__'): 
+                    _args = (func.__name__,)
+                else:
+                    raise ValueError('You must specify the location to store the vlermv.')
+            else:
+                _args = args
+            v = Class(*_args, **kwargs)
+            if hasattr(func, '__name__'):
+                v.__name__ = func.__name__
+            v.func = func
+            return v
+        return decorator
+
+    allow_empty = False
+    serializer = pickle
+    transformer = magic
+    appendable = True
+    mutable = True
+    tempdir = '.tmp'
+    cache_exceptions = False
+    extension = ''
+    base_directory = ''
+
+    def __init__(self, **kwargs):
+        '''
+        :param str base_directory: Top-level directory of the vlermv
+        :param serializer: A thing with dump and load functions for
+            serializing and deserializing Python objects,
+            like :py:mod:`json`, :py:mod:`yaml`, or
+            anything in :py:mod:`vlermv.serializers`
+        :type serializer: :py:mod:`serializer <vlermv.serializers>`
+        :param transformer: A thing with to_path and from_path functions
+            for transforming keys to file paths and back.
+            Several are available in :py:mod:`vlermvtransformers`.
+        :type transformer: :py:mod:`transformer <vlermvtransformers>`
+        :param bool mutable: Whether values can be updated and deleted
+        :param str tempdir: Subdirectory inside of base_directory to use for temporary files
+
+        These are mostly relevant for initialization via :py:func:`vlermv.cache`.
+
+        :param bool appendable: Whether new values can be added to the Vlermv
+            (Set this to False to ensure that the decorated function is never
+            run and that the all results are cached; this is useful for reviewing
+            old data in a read-only mode.)
+        :param bool cache_exceptions: If the decorated function raises
+            an exception, should the failure and exception be cached?
+            The exception is raised either way.
+        :raises TypeError: If cache_exceptions is True but the serializer
+            can't cache exceptions
+        '''
+        if not hasattr(self, '_args'):
+            self._args = tuple()
+        if not hasattr(self, '_kwargs'):
+            self._kwargs = kwargs
+
+        for key in ['serializer', 'appendable', 'mutable', 'base_directory',
+                    'transformer', 'cache_exceptions', 'extension']:
+            setattr(self, key, kwargs.get(key, getattr(self.__class__, key)))
+
+        if self.cache_exceptions and not getattr(self.serializer, 'cache_exceptions', True):
+            msg = 'Serializer %s cannot cache exceptions.'
+            raise TypeError(msg % repr(self.serializer))
+
+        self.binary_mode = getattr(self.serializer, 'binary_mode', False)
+        self.func = None
+        self.prefix = tuple()
+
+    def __call__(self, *args, **kwargs):
+        if self.func == None:
+            msg = 'Set %s.func to something if you want to call %s.'
+            raise NotImplementedError(msg % (self, self))
+        
+        if not hasattr(self.func, '__call__'):
+            raise AttributeError('%s.func must be callable.' % self.__class__.__name__)
+
+        if args in self:
+            output = self[args]
+        else:
+            try:
+                result = self.func(*args, **kwargs)
+            except Exception as error:
+                signature = self.__class__.__name__, getattr(self.func, '__name__', str(self.func)), args, kwargs
+                msg = 'Exception in %s calling this memoized function:\n%s(*%s, **%s)' % signature
+                logger.error(msg, exc_info = False)
+                if self.cache_exceptions:
+                    output = error, None
+                else:
+                    raise error
+            else:
+                if self.cache_exceptions:
+                    output = None, result
+                else:
+                    output = result
+            self[args] = output
+
+        if self.cache_exceptions:
+            if len(output) != 2:
+                msg = '''Deserializer returned %d elements,
+but it is supposed to return only two (exception, object).
+Perhaps the serializer doesn't implement exception caching properly?'''
+                raise TypeError(msg % len(output))
+
+            error, result = output
+            if error != None and result != None:
+                raise TypeError('''The exception or the object (or both) must be None.
+There's probably a problem with the serializer.''')
+
+            if error:
+                raise error
+        else:
+            result = output
+
+        return result
+
+    def __copy__(self):
+        return self.__class__(*self._args, **self._kwargs)
+    
+    def subset(self, key):
+        other = self.__copy__()
+        other.prefix = self.prefix + self.transformer.to_path(key)
+        return other
+
+    def filename(self, index):
+        '''
+        Get the absolute filename corresponding to a key; run the
+        transformer on the key and do a few other small things.
+
+        :raises TypeError: if the transformer returns something other than
+            a :py:class:`tuple` of :py:class:`strings <str>`
+        :raises KeyError: if the transformer returns an empty path
+            and allow_empty is not set
+        :returns: the filename
+        :rtype: str
+        '''
+        subpath = self.prefix + self.transformer.to_path(index)
+        if not isinstance(subpath, tuple):
+            msg = 'subpath is a %s, but it should be a tuple.'
+            raise TypeError(msg % type(subpath).__name__)
+        elif not self.allow_empty and len(subpath) == 0:
+            raise KeyError('You specified an empty key.')
+        elif not all(isinstance(x, str) for x in subpath):
+            msg = 'Elements of subpath should all be str; here is subpath:\n%s' % repr(subpath)
+            raise TypeError(msg)
+        return os.path.join(self.base_directory, *safe_path(subpath)) + self.extension
+
+    def from_filename(self, filename):
+        '''
+        Convert an absolute filename into key.
+        '''
+        i = len(self.base_directory)
+        if filename[:i] != self.base_directory:
+            raise KeyError('Filename needs to start with "%s";\nyou passed "%s".' % (self.base_directory, filename))
+
+        if filename.endswith(self.extension):
+            if len(self.extension) > 0:
+                j = -len(self.extension)
+            else:
+                j = None
+            path = tuple(filename[i:j].strip('/').split('/'))
+            if path[:len(self.prefix)] == self.prefix:
+                return self.transformer.from_path(path)[len(self.prefix):]
+            else:
+                raise KeyError('File is outside of the vlermv prefix.')
+
+    def __iter__(self):
+        return (k for k in self.keys())
+
+    def _b(self):
+        return 'b' if self.binary_mode else ''
+
+    def __delitem__(self, index):
+        if not self.mutable:
+            raise PermissionError('This vlermv is immutable, so you can\'t delete things.')
+
+    def __contains__(self, index):
+        fn = self.filename(index)
+        return os.path.isfile(fn)
+
+    def values(self):
+        for key, value in self.items():
+            yield value
+
+    def update(self, d):
+        generator = d.items() if hasattr(d, 'items') else d
+        for k, v in generator:
+            self[k] = v
+
+    def get(self, index, default = None):
+        if index in self:
+            return self[index]
+        else:
+            return default
+
+    def items(self):
+        for key in self.keys():
+            yield key, self[key]
+
+    def __setitem__(self, index, obj):
+        if (not self.mutable) and (index in self):
+            raise PermissionError('This vlermv is not mutable, so you can\'t edit things.')
+        if (not self.appendable) and (index not in self):
+            raise PermissionError('This vlermv is not appendable, so you can\'t append new things.')
+
+    def __getitem__(self, index):
+        raise NotImplementedError
+
+    def keys(self, **kwargs):
+        raise NotImplementedError
+
+    def __len__(self):
+        raise NotImplementedError
