@@ -1,15 +1,4 @@
 
-
-* Set up a file system
-* Users
-   --- User
-   ------ Friends
-   --------- .txt 
-   
-   Users/Maruf/Nishitha/msg.txt
-   Users/Maruf/Amisha/msg.txt
-
-
 Write the UI
 Implement the Client 
 Log in. User inserts username and password, and client sends the information to server. The server makes data lookup in Hadoop and sends confirmation to the client. If the server sends OK, the client logs in. 
@@ -48,9 +37,10 @@ Implement the UI
 Implement the server communication APIs
 
 Nishitha:
-Set up HDFS file system. Table -- <USER> (UserID, UserName, User Picture), <Message> (senderID, ReceiverID, time stamp, content), 
+Set up HDFS file system, RabbitMq
 Implement python function to look-up data in the file system.
 Implement python function to store data in the file system.
+Implement python function to retrieve data in the file system.
 
 Amisha:
 Implement a python function that intercepts client GET and POST request that was made through SocketIO.
