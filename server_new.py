@@ -66,7 +66,7 @@ def handle_client(client, channel, num_servers):  # Takes client socket as argum
     if len(old_messages) > 0 :
         from_ = old_messages['From']
         to_ = old_messages['Recip']
-        msgs = old_messages[Messages]
+        msgs = old_messages['Messages']
         individual_msg = msgs.split(',')
         for m in individual_msg:
             unicast(m, to_, from_)
