@@ -64,12 +64,13 @@ def handle_client(client, channel, num_servers):  # Takes client socket as argum
 
     # If it received any record
     if len(old_messages) > 0 :
-        from_ = old_messages['From']
-        to_ = old_messages['Recip']
-        msgs = old_messages['Messages']
-        individual_msg = msgs.split(',')
-        for m in individual_msg:
-            unicast(m, to_, from_)
+        for record in old_messages :
+            from_ = record['From']
+            to_ = record['Recip']
+            msgs = record['Messages']
+            individual_msg = msgs.split(',')
+            for m in individual_msg:
+                unicast(m, to_, from_)
     
     while True:
         message = client.recv(buffer_size).decode("utf8")
