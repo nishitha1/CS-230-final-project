@@ -44,6 +44,12 @@ def handle_client(client):  # Takes client socket as argument.
     msg = "%s has joined" % name
     broadcast(msg)
     clients[client] = name
+
+    # send the previous messages to the connected client
+    old_messages = get_all_message_for_dest(name)
+    for m in old_messages:
+        unicast(old_messages[m], name, m)
+
     while True:
         message = client.recv(buffer_size).decode("utf8")
         split = message.split('#')
