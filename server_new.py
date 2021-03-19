@@ -57,12 +57,19 @@ def handle_client(client, channel, num_servers):  # Takes client socket as argum
     register_broadcast(num_servers, channel)
     broadcast(msg, num_servers, channel)
     clients[client] = name
+    
     # send the previous messages to the connected client
     old_messages = get_all_message_for_dest(name)
-    {'From': "", "Recip": "","Messages:""}
-    for k, v in old_messages:
-        #message, destination, source
-        unicast(old_messages[m], name, m)
+    #{'From': "", "Recip": "","Messages:""}
+
+    # If it received any record
+    if len(old_messages) > 0 :
+        from_ = old_messages['From']
+        to_ = old_messages['Recip']
+        msgs = old_messages[Messages]
+        individual_msg = msgs.split(',')
+        for m in individual_msg:
+            unicast(m, to_, from_)
     
     while True:
         message = client.recv(buffer_size).decode("utf8")
