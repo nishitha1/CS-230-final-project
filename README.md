@@ -1,4 +1,4 @@
-# TODO Client Side
+## TODO Client Side
   * UI
   * Implement the Client 
   * Client sends the information to server. The server stores the information in hdfs and sends confirmation to the client.
@@ -9,7 +9,7 @@
     * The client can select a friend and send messages to him/her.
     * The client can log out.
 
-# TODO Server Side
+## TODO Server Side
   * Intercept client request
   * Registration request
   * Send message request
@@ -18,13 +18,13 @@
   * Retrieve data from HTFS
   * Delete message
   
-# Optional: friend request
+## Optional: friend request
 Respond to the client
 Routes the message to the intended client
 Sends login confirmation
 Sends homepage info -- personal information
 
-# Task Breakdown
+## Task Breakdown
 Maruf:
 Implement the UI
 Implement the server communication APIs
