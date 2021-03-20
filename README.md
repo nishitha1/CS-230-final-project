@@ -40,7 +40,7 @@ Implement a python function that intercepts client GET and POST request that was
 Implement a python function that can send data back to the client through SocketIO (or any other protocol). 
 
 
-# Materials:
+## Materials:
   * https://medium.com/swlh/how-to-make-simple-web-chat-8e9778f992c9
   * https://codeburst.io/building-your-first-chat-application-using-flask-in-7-minutes-f98de4adfa5d
   * https://www.twilio.com/blog/multi-room-web-chat-flask-react-twilio-conversations
@@ -48,3 +48,16 @@ Implement a python function that can send data back to the client through Socket
   * https://www.rabbitmq.com/tutorials/tutorial-one-python.html
   * https://www.rabbitmq.com/tutorials/tutorial-two-python.html
 
+## To execute code
+```
+first start rabbitmq-server
+
+python3 server_message.py 2
+python3 server_new.py 2 1
+
+```
+```
+cd Client
+python3 client.py
+
+```
